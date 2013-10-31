@@ -1,5 +1,7 @@
 #pragma once
 #include "Loader.h"
+#include "ELF64.h"
+#include "Utilities\Utility.h"
 
 struct SceHeader
 {
@@ -78,6 +80,53 @@ struct SelfHeader
 	}
 };
 
+struct Key {
+	u8 key[32];
+	u8 iv[16];
+
+	int pub_avail;
+	int priv_avail;
+	u8 pub[40];
+	u8 priv[21];
+	u32 ctype;
+};
+
+struct SelfSections{
+	u32 offset;
+	u32 size;
+	u32 compressed;
+	u32 size_uncompressed;
+	u32 elf_offset;
+};
+
+struct SelfSection {
+	u32 idx;
+	u64 offset;
+	u64 size;
+	u32 compressed;
+	u32 encrypted;
+	u64 next;
+};
+
+struct Keylist {
+	u32 n;
+	Key *keys;
+};
+
+static int qsort_compare(const void *a, const void *b)
+{
+	const struct SelfSection *sa, *sb;
+	sa = (SelfSection*)a;
+	sb = (SelfSection*)b;
+
+	if (sa->offset > sb->offset)
+		return 1;
+	else if(sa->offset < sb->offset)
+		return -1;
+	else
+		return 0;
+}
+
 class SELFLoader : public LoaderBase
 {
 	vfsStream& self_f;
@@ -85,9 +134,31 @@ class SELFLoader : public LoaderBase
 	SceHeader sce_hdr;
 	SelfHeader self_hdr;
 
+	Elf64_Ehdr ehdr;
+	Array<Elf64_Phdr> phdr_arr;
+	Array<Elf64_Shdr> shdr_arr;
+
+	SelfSections self_sections[255];
+	int n_sections;
+	Keylist *klist;
+
+	u32 meta_offset;
+	u64 header_len;
+	u32 meta_len;
+	u32 meta_n_hdr;
+
 public:
 	SELFLoader(vfsStream& f);
 
 	virtual bool LoadInfo();
 	virtual bool LoadData(u64 offset = 0);
+	bool DecryptSELF(vfsStream& self, vfsStream& elf);
+	Keylist* LoadKeys(void);
+	int DecryptHeader(u8 *buf, struct Keylist *klist);
+	int DecryptData(u8 *buf);
+
+	void ReadSection(u8 *buf, u32 i, struct SelfSection *sec);
+	void ReadSections(u8 *buf);
+
+	int WriteElf(u8 *buf, vfsStream& elf);
 };

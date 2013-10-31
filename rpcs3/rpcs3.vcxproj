@@ -124,7 +124,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>adv.lib;base.lib;core.lib;aui.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>adv.lib;base.lib;core.lib;aui.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;libaes.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
@@ -195,6 +195,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\Thread.cpp" />
+    <ClCompile Include="..\Utilities\Utility.cpp" />
     <ClCompile Include="AppConnector.cpp" />
     <ClCompile Include="Emu\Cell\MFC.cpp" />
     <ClCompile Include="Emu\Cell\PPCThread.cpp" />
@@ -297,6 +298,7 @@
     <ClInclude Include="..\Utilities\MTProgressDialog.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
+    <ClInclude Include="..\Utilities\Utility.h" />
     <ClInclude Include="Emu\Cell\PPCDecoder.h" />
     <ClInclude Include="Emu\Cell\PPCDisAsm.h" />
     <ClInclude Include="Emu\Cell\PPCInstrTable.h" />

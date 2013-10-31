@@ -310,6 +310,9 @@
     <ClCompile Include="Emu\FS\vfsFile.cpp">
       <Filter>Emu\FS</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\Utility.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -478,6 +481,9 @@
       <Filter>Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\BEType.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Utility.h">
       <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>

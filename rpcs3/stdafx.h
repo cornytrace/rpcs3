@@ -15,6 +15,8 @@
 #include <wx/spinctrl.h>
 #include <wx/filepicker.h>
 
+#include <wxWidgets\src\zlib\zlib.h>
+
 #include <wx/wxprec.h>
 
 typedef unsigned int uint;
