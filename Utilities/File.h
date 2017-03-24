@@ -623,4 +623,70 @@ namespace fs
 
 		return false;
 	}
+
+	// Transparent wrapper to limit access to a specific part of a file
+	struct file_view final : file_base
+	{
+		std::unique_ptr<file_base> file;
+		size_t pos;
+		size_t m_offset;
+		size_t m_size;
+
+		file_view(std::unique_ptr<file_base> base, size_t offset, size_t size) : m_offset(offset), m_size(size), file(std::move(base))
+		{
+			seek(0, fs::seek_set);
+		}
+
+		~file_view() override
+		{
+		}
+
+		stat_t stat() override
+		{
+			return file->stat();
+		}
+
+		bool trunc(u64 length) override
+		{
+			return file->trunc(length);
+		}
+
+		u64 read(void* buffer, u64 size) override
+		{
+			file->seek(pos, fs::seek_set);
+			u64 real_size = file->read(buffer, size);
+			pos += real_size;
+			return real_size;
+		}
+
+		u64 write(const void* buffer, u64 size) override
+		{
+			file->seek(pos, fs::seek_set);
+			u64 real_size = file->write(buffer, size);
+			pos += real_size;
+			return real_size;
+		}
+
+		u64 seek(s64 offset, seek_mode whence) override
+		{
+			switch (whence) {
+			case seek_cur:
+				pos = pos + offset;
+				break;
+			case seek_set:
+				pos = offset + m_offset;
+				break;
+			case seek_end:
+				pos = offset + m_offset + size();
+				break;
+			}
+			file->seek(pos, seek_set);
+			return pos - m_offset;
+		}
+
+		u64 size() override
+		{
+			return m_size;
+		}
+	};
 }

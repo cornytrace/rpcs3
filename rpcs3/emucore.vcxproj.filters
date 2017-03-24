@@ -69,6 +69,9 @@
     <Filter Include="Emu\PSP2\Modules">
       <UniqueIdentifier>{1d9e6fc4-9a79-4329-a8b5-081e24822aaa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Loader\DiscIO">
+      <UniqueIdentifier>{e6a9abb2-51b5-40b7-ac85-499e5384808d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -911,6 +914,9 @@
     <ClCompile Include="Loader\TAR.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\CDUtils.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
     <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -934,6 +940,15 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_net.cpp">
       <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\PS3ISO.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\DiscIO\Blob.cpp">
+      <Filter>Loader\DiscIO</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\DiscIO\DriveBlob.cpp">
+      <Filter>Loader\DiscIO</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1774,6 +1789,9 @@
     <ClInclude Include="Loader\TAR.h">
       <Filter>Loader</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utilities\CDUtils.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="..\Utilities\GDBDebugServer.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1806,6 +1824,15 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_net.h">
       <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\PS3ISO.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\DiscIO\Blob.h">
+      <Filter>Loader\DiscIO</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\DiscIO\DriveBlob.h">
+      <Filter>Loader\DiscIO</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

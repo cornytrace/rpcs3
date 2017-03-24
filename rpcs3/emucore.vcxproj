@@ -75,6 +75,7 @@
     <ClCompile Include="..\Utilities\bin_patch.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\Utilities\CDUtils.cpp" />
     <ClCompile Include="..\Utilities\cond.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -397,7 +398,10 @@
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
     <ClCompile Include="Emu\Memory\vm.cpp" />
     <ClCompile Include="Emu\System.cpp" />
+    <ClCompile Include="Loader\DiscIO\Blob.cpp" />
+    <ClCompile Include="Loader\DiscIO\DriveBlob.cpp" />
     <ClCompile Include="Loader\ELF.cpp" />
+    <ClCompile Include="Loader\PS3ISO.cpp" />
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\PUP.cpp" />
     <ClCompile Include="Loader\TAR.cpp" />
@@ -419,6 +423,7 @@
     <ClInclude Include="..\Utilities\bin_patch.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
     <ClInclude Include="..\Utilities\bit_set.h" />
+    <ClInclude Include="..\Utilities\CDUtils.h" />
     <ClInclude Include="..\Utilities\cfmt.h" />
     <ClInclude Include="..\Utilities\cond.h" />
     <ClInclude Include="..\Utilities\CRC.h" />
@@ -690,7 +695,10 @@
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
     <ClInclude Include="Emu\RSX\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
+    <ClInclude Include="Loader\DiscIO\Blob.h" />
+    <ClInclude Include="Loader\DiscIO\DriveBlob.h" />
     <ClInclude Include="Loader\ELF.h" />
+    <ClInclude Include="Loader\PS3ISO.h" />
     <ClInclude Include="Loader\PSF.h" />
     <ClInclude Include="Loader\PUP.h" />
     <ClInclude Include="Loader\TAR.h" />
