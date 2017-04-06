@@ -65,10 +65,14 @@ namespace fs {
 
 	}
 
-	// Returns extent, is dir, size
-	// Returns true if extent is dir, returns false if extent is file
+	// Returns extent, and stat_t of file or dir
 	std::tuple<u32,stat_t> iso_device::find_extent(const std::string path)
 	{
+		auto it = drive_info->extent_map.find(path);
+		if (it != drive_info->extent_map.end()) {
+			return drive_info->extent_map[path];
+		}
+
 		auto path_dirs = fmt::split(path, { "/", "\\" });
 		int numfound = 1;
 		int i = 1;
@@ -104,7 +108,9 @@ namespace fs {
 						stat.is_writable = false;
 						stat.atime = stat.mtime = stat.ctime = iso_time_to_time(dir_rec.date);
 						stat.size = *(u32*)&dir_rec.size;
-						return { *(u32*)&dir_rec.extent, stat };
+						std::tuple<u32, stat_t> result = { *(u32*)&dir_rec.extent, stat };
+						drive_info->extent_map[path] = result;
+						return result;
 					}
 				}
 				break;
@@ -118,7 +124,9 @@ namespace fs {
 				stat.is_writable = false;
 				stat.atime = stat.mtime = stat.ctime = iso_time_to_time(dir_rec.date);
 				stat.size = *(u32*)&dir_rec.size;
-				return{ *(u32*)&drive_info->pathtables[i].extent, stat };
+				std::tuple<u32, stat_t> result = { *(u32*)&drive_info->pathtables[i].extent, stat };
+				drive_info->extent_map[path] = result;
+				return result;
 			}
 			while (path_dirs[numfound] == ".") {
 				numfound++;

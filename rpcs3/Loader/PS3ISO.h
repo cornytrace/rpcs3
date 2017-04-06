@@ -4,15 +4,12 @@
 #include "Crypto\utils.h"
 #include "DiscIO\DriveBlob.h"
 #include "Utilities\CDUtils.h"
+#include "Utilities\File.h"
 
 #include "..\3rdparty\zlib\zlib.h"
 
 #include <string>
 #include <vector>
-
-namespace fs {
-	class file;
-}
 
 struct DiscRegion {
 	size_t startSector;
@@ -106,6 +103,7 @@ struct iso_info {
 	iso_primary_descriptor voldes;
 	std::vector<iso_path_table> pathtables;
 	iso_directory_record *rootdir;
+	std::unordered_map<std::string, std::tuple<u32, fs::stat_t>> extent_map;
 };
 
 namespace fs {
