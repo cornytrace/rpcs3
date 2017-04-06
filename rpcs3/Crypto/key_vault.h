@@ -150,6 +150,14 @@ static u8 SCEPKG_ERK[0x20] = {
 	0x4D, 0xBC, 0xB2, 0xCB, 0x52, 0xC5, 0xA2, 0xF8, 0xB0, 0x2B, 0x10, 0x31 
 };
 
+static u8 KEY_3K3Y[16] = {
+	56, 11, 207, 11, 83, 69, 91, 60, 120, 23, 171, 79, 163, 186, 144, 237
+};
+
+static u8 IV_3K3Y[16] = {
+	105, 71, 71, 114, 175, 111, 218, 179, 66, 116, 58, 239, 170, 24, 98, 135
+};
+
 class KeyVault
 {
 	std::vector<SELF_KEY> sk_LV0_arr;

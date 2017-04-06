@@ -5,6 +5,7 @@
 #include "DiscIO\DriveBlob.h"
 #include "Utilities\CDUtils.h"
 #include "Utilities\File.h"
+#include "Crypto\key_vault.h"
 
 #include "..\3rdparty\zlib\zlib.h"
 
@@ -14,10 +15,10 @@
 struct DiscRegion {
 	size_t startSector;
 	size_t nextSector;
-	aes_context ctx;
 	bool encrypted;
 
-	DiscRegion(size_t startSector, size_t nextSector, bool encrypted);
+	DiscRegion(size_t startSector, size_t nextSector, bool encrypted)
+		: startSector(startSector), nextSector(nextSector), encrypted(encrypted) {};
 };
 
 // Adapted from mkisofs iso9660.h
@@ -100,6 +101,7 @@ struct iso_directory_record {
 
 struct iso_info {
 	std::vector<u8> game_id;
+	std::array<u8, 16> disc_key;
 	iso_primary_descriptor voldes;
 	std::vector<iso_path_table> pathtables;
 	iso_directory_record *rootdir;
@@ -108,6 +110,7 @@ struct iso_info {
 
 namespace fs {
 
+	// iso_device presents a virtual device corresponding to a decrypted version of an ISO or real disk
 	struct iso_device : device_base
 	{	
 		std::string iso_path;
@@ -116,6 +119,11 @@ namespace fs {
 
 		iso_device(std::string iso);
 		~iso_device();
+
+		bool need_ird();
+		void set_ird(fs::file ird);
+
+		std::string get_game_id();
 
 		bool stat(const std::string& path, stat_t& info);
 		bool statfs(const std::string& path, device_stat& info);
@@ -130,18 +138,20 @@ namespace fs {
 		std::unique_ptr<dir_base> open_dir(const std::string& path);
 
 	protected:
-		std::tuple<u32, stat_t> find_extent(const std::string path);
+		std::tuple<u32, stat_t> find_extent(std::string path);
 	};
 
+	// iso_stream ensures 2048 byte aligned reads, and decryption of encrypted sections of the disk
 	struct iso_stream : file_base
 	{
 		fs::file iso;
+		std::array<u8, 16> disc_key;
 		std::unique_ptr<DiscIO::DriveReader> m_drivereader;
 		size_t pos = 0;
 		bool isDrive;
 		std::vector<DiscRegion> regions;
 
-		iso_stream::iso_stream(std::string path)
+		iso_stream::iso_stream(std::string path, std::array<u8, 16> key = std::array<u8, 16>()) : disc_key(key)
 		{
 			if (fs::is_file(path)) {
 				iso.open(path);
@@ -159,7 +169,7 @@ namespace fs {
 			char hasEncryption;
 			seek(3952, fs::seek_set);
 			read(&hasEncryption, 1); // Read (possible) 3K3Y header
-			if (hasEncryption != 68) {
+			if (hasEncryption != 68) { // 'D' in Decrypted
 				// Determine number of encrypted regions
 				be_t<u32> numRegions = 0;
 				seek(0, fs::seek_set);
@@ -175,6 +185,20 @@ namespace fs {
 					regions.emplace_back(DiscRegion(startsector, nextsector, isEncrypted));
 					isEncrypted = !isEncrypted;
 					startsector = nextsector;
+				}
+
+				// if disc_key is all zeroes, decrypt disc key
+				if (disc_key.end() == std::find(disc_key.begin(), disc_key.end(), true)) {
+					if (hasEncryption == 69) { // 'E' in Encrypted
+						seek(3968, fs::seek_set); // Decrypt disc key from 3K3Y header
+						read(disc_key.data(), 16);
+					}
+
+					aes_context ctx;
+					aes_setkey_enc(&ctx, KEY_3K3Y, 128);
+					u8 iv[16];
+					memcpy_s(iv, 16, IV_3K3Y, 16);
+					aes_crypt_cbc(&ctx, AES_ENCRYPT, 16, iv, disc_key.data(), disc_key.data());
 				}
 			}
 		}
@@ -201,29 +225,42 @@ namespace fs {
 		{
 			bool encrypted = false;
 			for (auto region : regions) {
-				if ((pos > region.startSector*2048) && (pos <= region.nextSector*2048)) {
+				if ((pos >= region.startSector*2048) && (pos < region.nextSector*2048)) {
 					encrypted = region.encrypted;
 					break;
 				}
 			}
 			if (encrypted) {
-				/*size_t buf_offset = pos - (pos % 2048);
+				size_t initial_pos = pos;
+				size_t buf_offset = pos - (pos % 2048);
 				size_t buf_size = size - (size % 2048) + 2048;
 				std::vector<u8> temp(buf_size);
 
 				if (isDrive) {
-					m_drivereader->Read(pos, size, (u8*)temp.data());
+					m_drivereader->Read(buf_offset, buf_size, (u8*)temp.data());
 				}
 				else {
-					iso.seek(pos);
-					iso.read(temp, size);
+					iso.seek(buf_offset);
+					iso.read(temp, buf_size);
 				}
+				pos += size;
 
 				// decryption goes here
+				aes_context ctx;
+				aes_setkey_dec(&ctx, disc_key.data(), 128);
+				for (int i = 0; i < (int)(buf_size / 2048); i++) { // For each sector in temp
+					int num = (int)(buf_offset / 2048) + i;
+					u8 arr[16];
+					for (int j = 0; j < 16; j++)
+					{
+						arr[16 - j - 1] = (u8)(num & 255);
+						num >>= 8;
+					}
+					aes_crypt_cbc(&ctx, AES_DECRYPT, 2048, arr, temp.data() + ( i * 2048), temp.data() + (i * 2048));
+				}
 
-				memcpy_s(buffer, size, temp.data() + (pos - buf_offset), size);*/
-
-				fmt::throw_exception("No ISO decryption support yet.");
+				memcpy_s(buffer, size, temp.data() + (initial_pos - buf_offset), size);
+				return size;
 			}
 
 			if (isDrive) {

@@ -25,12 +25,6 @@ static s64 iso_time_to_time(char date[7]) {
 	return mktime(&time);
 }
 
-DiscRegion::DiscRegion(size_t startSector, size_t nextSector, bool encrypted) 
-	: startSector(startSector), nextSector(nextSector), encrypted(encrypted) 
-{
-
-}
-
 namespace fs {
 
 	iso_device::iso_device(std::string iso) : iso_path(iso)
@@ -65,21 +59,96 @@ namespace fs {
 
 	}
 
+	bool iso_device::need_ird() {
+		char hasEncryption;
+		file.seek(3952);
+		file.read(hasEncryption);
+		return (hasEncryption != 68) && (hasEncryption != 69);
+	}
+
+	void iso_device::set_ird(fs::file ird_file) {
+		constexpr size_t BUFSIZE = 8 * 1024; // Decompress IRD
+		std::vector<u8> tempin = ird_file.to_vector<u8>();
+		u8 tempbuf[BUFSIZE];
+		std::vector<u8> out;
+		z_stream strm;
+		strm.zalloc = Z_NULL;
+		strm.zfree = Z_NULL;
+		strm.opaque = Z_NULL;
+		strm.avail_in = ird_file.size();
+		strm.avail_out = BUFSIZE;
+		strm.next_in = &tempin[0];
+		strm.next_out = tempbuf;
+		int ret = inflateInit2(&strm, 32 + MAX_WBITS);
+
+		while (strm.avail_in)
+		{
+			ret = inflate(&strm, Z_NO_FLUSH);
+			if (ret == Z_STREAM_END)
+				break;
+			if (ret != Z_OK)
+				fmt::throw_exception("Error while decompressing IRD file!");
+
+			if (!strm.avail_out) {
+				out.insert(out.end(), &tempbuf[0], &tempbuf[BUFSIZE]);
+				strm.next_out = tempbuf;
+				strm.avail_out = BUFSIZE;
+			}
+			else
+				break;
+		}
+
+		int inflate_res = Z_OK;
+		inflate_res = inflate(&strm, Z_FINISH);
+
+		if (inflate_res != Z_STREAM_END)
+			fmt::throw_exception("Error while decompressing IRD file!");
+
+		out.insert(out.end(), &tempbuf[0], &tempbuf[BUFSIZE - strm.avail_out]);
+		inflateEnd(&strm);
+
+		std::array<u8, 16> disc_key;
+		// Generate disc key
+		for (int i = (out.size() - 40); i < (out.size() - 24); i++)
+		{
+			disc_key[(i - (out.size() - 40))] = out[i];
+		}
+		drive_info->disc_key = disc_key;
+		file.reset(std::make_unique<iso_stream>(iso_path, disc_key));
+	}
+
+	std::string iso_device::get_game_id()
+	{
+		auto id = std::string((char*)drive_info->game_id.data(), 
+			std::find(drive_info->game_id.begin(), drive_info->game_id.end(), ' ') - drive_info->game_id.begin());
+		id.erase(std::remove(id.begin(), id.end(), '-'), id.end());
+		return id;
+	}
+
 	// Returns extent, and stat_t of file or dir
-	std::tuple<u32,stat_t> iso_device::find_extent(const std::string path)
+	std::tuple<u32,stat_t> iso_device::find_extent(std::string path)
 	{
 		auto it = drive_info->extent_map.find(path);
 		if (it != drive_info->extent_map.end()) {
 			return drive_info->extent_map[path];
 		}
 
-		auto path_dirs = fmt::split(path, { "/", "\\" });
+		auto path_dirs = fmt::split(path, { "/", "//", "\\" });
+
+		if (path_dirs.size() == 1) {
+			//This is a request for the root dir
+			stat_t stat;
+			stat.is_directory = true;
+			stat.is_writable = false;
+			return{ 1, stat };
+		}
+
 		int numfound = 1;
 		int i = 1;
 		u16 parent = 1;
 		while (numfound < path_dirs.size()) {
-			if (*(u16*)&drive_info->pathtables[i].parent == parent) {
-				if (drive_info->pathtables[i].name == path_dirs[numfound]) {
+			if ((i < drive_info->pathtables.size()) && (*(u16*)&drive_info->pathtables[i].parent == parent)) {
+				if (stricmp(drive_info->pathtables[i].name,path_dirs[numfound].c_str()) == 0) {
 					parent = i+1;
 					i++;
 					numfound++;
@@ -96,13 +165,20 @@ namespace fs {
 				u32 dirextent = *(u32*)&drive_info->pathtables[parent - 1].extent;
 				iso_directory_record dir_rec;
 				file.seek(dirextent * 2048);
-				while (true) {
+				file.read(&dir_rec, 33);
+				file.seek(dir_rec.length[0] - 33, fs::seek_cur);
+				u32 dirlength = *(u32*)&dir_rec.size;
+				u32 dirpos = dirextent * 2048;
+				while (file.pos() < dirpos+dirlength) {
 					file.read(&dir_rec, 33);
-					if (dir_rec.length[0] == 0)
-						break;
+					if (dir_rec.length[0] == 0) { // The next entry did not fit entirely in the current sector, skip to next sector.
+						u64 pos = file.pos() - 33;
+						file.seek(pos + (2048 - (pos % 2048)));
+						continue;
+					}
 					file.read(&dir_rec.name, dir_rec.length[0]-33);
 					auto temp1 = fmt::split(std::string(dir_rec.name), { ";" });
-					if ((temp1.size() > 0) && (temp1[0] == path_dirs[numfound])) {
+					if ((temp1.size() > 0) && (stricmp(temp1[0].c_str(), path_dirs[numfound].c_str()) == 0)) {
 						stat_t stat;
 						stat.is_directory = std::bitset<8>(dir_rec.flags[0])[1];
 						stat.is_writable = false;
@@ -203,7 +279,7 @@ namespace fs {
 		stat_t stat;
 		std::tie(extent, stat) = find_extent(path);
 		if ((extent > 0) && !stat.is_directory)
-			return std::make_unique<file_view>(std::make_unique<iso_stream>(iso_path), (size_t)extent * 2048, stat.size);
+			return std::make_unique<file_view>(std::make_unique<iso_stream>(iso_path, drive_info->disc_key), (size_t)extent * 2048, stat.size);
 		else
 			return std::unique_ptr<file_base>();
 	}
