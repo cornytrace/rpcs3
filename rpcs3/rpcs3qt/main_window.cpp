@@ -39,6 +39,7 @@
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
 #include "Loader/PSF.h"
+#include "Loader/PS3ISO.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/StrUtil.h"
@@ -253,6 +254,7 @@ void main_window::BootElf()
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
+		"ISO files (*.iso);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
@@ -268,7 +270,49 @@ void main_window::BootElf()
 	// game folder in case of having e.g. a Game Folder with collected links to elf files.
 	// Don't set last path earlier in case of cancelled dialog
 	guiSettings->SetValue(gui::fd_boot_elf, filePath);
-	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
+	std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
+
+	if (filePath.endsWith(".iso")) {
+		auto device = std::make_shared<fs::iso_device>(path);
+
+		if (device->need_ird())
+		{
+			QString irdPath;
+			std::string irdsearchpath = fs::get_parent_dir(path);
+			fs::dir isodir = fs::dir(irdsearchpath);
+
+			fs::dir_entry ent;
+			std::string gameid = device->get_game_id();
+			while (isodir.read(ent)) { //if the IRD file is in the same directory as the ISO, find it automatically
+				if (!ent.is_directory && (ent.name.find(gameid) != std::string::npos)
+					&& (ent.name.find(".ird") != std::string::npos)) {
+					irdPath = QString::fromStdString(irdsearchpath + "/" + ent.name);
+					break;
+				}
+			}
+
+			if (irdPath == NULL) {
+				QString path_last_IRD = guiSettings->GetValue(gui::fd_boot_ird).toString();
+				irdPath = QFileDialog::getOpenFileName(this, tr("Please supply a valid IRD file to decrypt the disc"), path_last_IRD, tr(
+					"IRD files (*.ird);;"
+					"All files (*.*)"),
+					Q_NULLPTR, QFileDialog::DontResolveSymlinks);
+
+				if (irdPath == NULL)
+				{
+					LOG_ERROR(GENERAL, "Please supply a valid IRD file to decrypt the disc.");
+					if (stopped) Emu.Resume();
+					return;
+				}
+				guiSettings->SetValue(gui::fd_boot_ird, QFileInfo(irdPath).path());
+			}
+
+			device->set_ird(fs::file(irdPath.toStdString()));
+		}
+
+		path = "//iso";
+		fs::set_virtual_device(path, device);
+	}
 
 	SetAppIconFromPath(path);
 	Emu.SetForceBoot(true);

@@ -136,6 +136,7 @@ namespace gui
 	const gui_save fd_install_pup  = gui_save(main_window, "lastExplorePathPUP",  "" );
 	const gui_save fd_boot_elf     = gui_save(main_window, "lastExplorePathELF",  "" );
 	const gui_save fd_boot_game    = gui_save(main_window, "lastExplorePathGAME", "" );
+	const gui_save fd_boot_ird	   = gui_save(main_window, "lastExplorePathIRD",  "" );
 	const gui_save fd_decrypt_sprx = gui_save(main_window, "lastExplorePathSPRX", "" );
 	const gui_save fd_cg_disasm    = gui_save(main_window, "lastExplorePathCGD",  "" );
 
