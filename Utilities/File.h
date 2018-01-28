@@ -629,8 +629,8 @@ namespace fs
 	{
 		std::unique_ptr<file_base> file;
 		size_t pos;
-		size_t m_offset;
-		size_t m_size;
+		const size_t m_offset;
+		const size_t m_size;
 
 		file_view(std::unique_ptr<file_base> base, size_t offset, size_t size) : m_offset(offset), m_size(size), file(std::move(base))
 		{
@@ -671,13 +671,13 @@ namespace fs
 		{
 			switch (whence) {
 			case seek_cur:
-				pos = pos + offset;
+				pos = std::min(pos + (size_t)offset, m_offset + size());
 				break;
 			case seek_set:
-				pos = offset + m_offset;
+				pos = m_offset + std::min((size_t)offset, size());
 				break;
 			case seek_end:
-				pos = offset + m_offset + size();
+				pos = m_offset + size() - std::min((size_t)offset, size());
 				break;
 			}
 			file->seek(pos, seek_set);
