@@ -339,7 +339,7 @@
   </widget>
   <action name="bootElfAct">
    <property name="text">
-    <string>Boot SELF/ELF</string>
+    <string>Boot ISO/SELF/ELF</string>
    </property>
   </action>
   <action name="bootGameAct">
